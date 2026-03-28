@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { GoogleGenAI } from '@google/genai';
 import { Wand2, Image as ImageIcon, Download, Settings2, Loader2, Sparkles, AlertCircle, Eraser, Paintbrush, Undo, Layers, Upload, X, Palette, Save } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -62,8 +63,9 @@ const MATERIAL_LIBRARY = [
 ];
 
 export function Editor() {
-  const [prompt, setPrompt] = useState('');
-  const [negativePrompt, setNegativePrompt] = useState('');
+  const location = useLocation();
+  const [prompt, setPrompt] = useState(location.state?.positivePrompt || '');
+  const [negativePrompt, setNegativePrompt] = useState(location.state?.negativePrompt || '');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [hasKey, setHasKey] = useState<boolean | null>(null);

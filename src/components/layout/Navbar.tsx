@@ -10,6 +10,8 @@ export function Navbar() {
   const navLinks = [
     { name: 'Studio', path: '/editor' },
     { name: 'Projects', path: '/dashboard' },
+    { name: 'Prompts', path: '/prompts' },
+    { name: 'Assistants', path: '/assistants' },
     { name: 'Pricing', path: '/pricing' },
   ];
 
