@@ -21,6 +21,14 @@ interface Message {
 
 const DEFAULT_PERSONAS: Persona[] = [
   {
+    id: 'clara',
+    name: 'Clara',
+    role: 'Assistente Pessoal e Profissional',
+    personality: 'Organizada, proativa, empática e altamente focada em otimizar o fluxo de trabalho de designers de interiores. Especialista em tendências, gestão de projetos e atendimento ao cliente.',
+    tone: 'Profissional, acolhedor, claro e inspirador.',
+    avatarUrl: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=200&auto=format&fit=crop'
+  },
+  {
     id: 'paula',
     name: 'Paula Ambrosio',
     role: 'Principal Architect',
@@ -65,6 +73,17 @@ export function Assistants() {
   useEffect(() => {
     scrollToBottom();
   }, [messages, isTyping]);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewPersona({ ...newPersona, avatarUrl: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleCreatePersona = () => {
     if (!newPersona.name || !newPersona.personality) return;
@@ -225,12 +244,16 @@ export function Assistants() {
               <div className="space-y-6">
                 <div className="flex items-center gap-6 mb-8">
                   <img src={newPersona.avatarUrl} alt="Preview" className="w-24 h-24 rounded-full object-cover border-4 border-muted shadow-md" />
-                  <div>
+                  <div className="flex flex-col gap-2">
+                    <label className="cursor-pointer text-xs uppercase tracking-widest font-medium text-primary-foreground bg-primary px-4 py-2 rounded-full hover:bg-primary/90 transition-colors text-center">
+                      Upload Image
+                      <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                    </label>
                     <button 
                       onClick={() => setNewPersona({...newPersona, avatarUrl: `https://api.dicebear.com/7.x/notionists/svg?seed=${Date.now()}`})}
                       className="text-xs uppercase tracking-widest font-medium text-primary bg-muted px-4 py-2 rounded-full hover:bg-primary/10 transition-colors"
                     >
-                      Regenerate Image
+                      Regenerate Avatar
                     </button>
                   </div>
                 </div>
