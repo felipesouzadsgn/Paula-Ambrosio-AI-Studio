@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI } from '@google/genai';
 import { Wand2, Image as ImageIcon, Download, Settings2, Loader2, Sparkles, AlertCircle, Eraser, Paintbrush, Undo, Layers, Upload, X, Palette, Save } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { promptLibrary } from '../data/prompts';
 
 // Declare global aistudio for TypeScript
 declare global {
@@ -62,6 +63,7 @@ const MATERIAL_LIBRARY = [
 
 export function Editor() {
   const [prompt, setPrompt] = useState('');
+  const [negativePrompt, setNegativePrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [hasKey, setHasKey] = useState<boolean | null>(null);
@@ -73,7 +75,7 @@ export function Editor() {
   const [style, setStyle] = useState('Luxury Modern');
 
   // Edit State
-  const [activeTab, setActiveTab] = useState<'generate' | 'edit' | 'video'>('generate');
+  const [activeTab, setActiveTab] = useState<'generate' | 'edit' | 'video' | 'library'>('generate');
   const [editMode, setEditMode] = useState<'replace' | 'remove' | 'style' | null>(null);
   const [editPrompt, setEditPrompt] = useState('');
   const [brushSize, setBrushSize] = useState(30);
@@ -85,6 +87,9 @@ export function Editor() {
   const [generatedVideo, setGeneratedVideo] = useState<string | null>(null);
   const [isVideoGenerating, setIsVideoGenerating] = useState(false);
   const [videoProgress, setVideoProgress] = useState('');
+  
+  // Library State
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
   
   // Suggestions State
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -290,6 +295,10 @@ export function Editor() {
       const ai = new GoogleGenAI({ apiKey });
       
       let fullPrompt = `High-end luxury interior design, Miami style, ${style} aesthetic. ${prompt}. Photorealistic, architectural photography, 8k resolution, highly detailed, perfect lighting, curated by Paula Ambrosio.`;
+      
+      if (negativePrompt) {
+        fullPrompt += `\n\nNegative prompt (avoid these): ${negativePrompt}`;
+      }
       
       if (referenceImage) {
         if (referenceMode === 'structure') {
@@ -680,6 +689,12 @@ export function Editor() {
             >
               Video
             </button>
+            <button 
+              onClick={() => setActiveTab('library')}
+              className={`flex-1 py-2 text-xs uppercase tracking-widest font-medium rounded-lg transition-colors ${activeTab === 'library' ? 'bg-white shadow-sm text-primary' : 'text-muted-foreground hover:text-primary'}`}
+            >
+              Library
+            </button>
           </div>
         </div>
 
@@ -695,6 +710,17 @@ export function Editor() {
                   placeholder="e.g. A spacious living room with floor-to-ceiling windows overlooking the ocean, white marble floors, curved velvet sofa..."
                   className="w-full h-32 p-4 bg-muted border border-border rounded-2xl text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary transition-shadow"
                 />
+                
+                <div className="mt-4">
+                  <label className="block text-xs uppercase tracking-widest font-medium mb-3 text-muted-foreground">Negative Prompt (Avoid)</label>
+                  <textarea 
+                    value={negativePrompt}
+                    onChange={(e) => setNegativePrompt(e.target.value)}
+                    placeholder="e.g. cluttered, dark, traditional furniture, low quality..."
+                    className="w-full h-16 p-3 bg-muted/50 border border-border rounded-xl text-xs resize-none focus:outline-none focus:ring-1 focus:ring-primary transition-shadow"
+                  />
+                </div>
+                
                 <AnimatePresence>
                   {(suggestions.length > 0 || isSuggesting) && (
                     <motion.div 
@@ -1194,6 +1220,28 @@ export function Editor() {
               </div>
             </>
           )}
+          {activeTab === 'library' && (
+            <div className="space-y-4">
+              <label className="block text-xs uppercase tracking-widest font-medium mb-3">Categories</label>
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={() => setSelectedCategory('All')}
+                  className={`text-left px-4 py-3 rounded-xl text-sm transition-colors ${selectedCategory === 'All' ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/80 text-foreground'}`}
+                >
+                  All Prompts
+                </button>
+                {Array.from(new Set(promptLibrary.map(p => p.category))).map(category => (
+                  <button
+                    key={category}
+                    onClick={() => setSelectedCategory(category)}
+                    className={`text-left px-4 py-3 rounded-xl text-sm transition-colors ${selectedCategory === category ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/80 text-foreground'}`}
+                  >
+                    {category}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Action Button */}
@@ -1229,7 +1277,7 @@ export function Editor() {
                 <><Sparkles className="w-4 h-4" /> Apply Edit</>
               )}
             </button>
-          ) : (
+          ) : activeTab === 'video' ? (
             <button 
               onClick={handleGenerateVideo}
               disabled={isVideoGenerating || !videoPrompt}
@@ -1241,7 +1289,7 @@ export function Editor() {
                 <><Wand2 className="w-4 h-4" /> Generate Video</>
               )}
             </button>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -1325,6 +1373,66 @@ export function Editor() {
                 >
                   <Download className="w-5 h-5" />
                 </button>
+              </div>
+            </motion.div>
+          ) : activeTab === 'library' ? (
+            <motion.div 
+              key="library"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="w-full max-w-5xl h-full flex flex-col"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-2xl font-serif">Prompt Library</h3>
+                <span className="text-sm text-muted-foreground">{promptLibrary.filter(p => selectedCategory === 'All' || p.category === selectedCategory).length} Prompts</span>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 overflow-y-auto custom-scrollbar pb-12 pr-4">
+                {promptLibrary
+                  .filter(p => selectedCategory === 'All' || p.category === selectedCategory)
+                  .map((promptItem) => (
+                    <div key={promptItem.id} className="bg-white rounded-2xl p-6 shadow-sm border border-border flex flex-col h-full hover:shadow-md transition-shadow">
+                      <div className="flex justify-between items-start mb-4">
+                        <span className="text-[10px] uppercase tracking-widest font-medium text-primary bg-primary/10 px-2 py-1 rounded-md">
+                          {promptItem.category}
+                        </span>
+                        {!promptItem.isFree && (
+                          <span className="text-[10px] uppercase tracking-widest font-medium text-amber-600 bg-amber-100 px-2 py-1 rounded-md flex items-center gap-1">
+                            <Sparkles className="w-3 h-3" /> Premium
+                          </span>
+                        )}
+                        {promptItem.isFree && (
+                          <span className="text-[10px] uppercase tracking-widest font-medium text-green-600 bg-green-100 px-2 py-1 rounded-md">
+                            Free
+                          </span>
+                        )}
+                      </div>
+                      
+                      <h4 className="font-serif text-lg mb-3">{promptItem.title}</h4>
+                      
+                      <div className="flex-1 space-y-4">
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground mb-1 uppercase tracking-wider">Positive Prompt</p>
+                          <p className="text-sm line-clamp-4">{promptItem.positivePrompt}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground mb-1 uppercase tracking-wider">Negative Prompt</p>
+                          <p className="text-sm line-clamp-2 text-muted-foreground">{promptItem.negativePrompt}</p>
+                        </div>
+                      </div>
+                      
+                      <button
+                        onClick={() => {
+                          setPrompt(promptItem.positivePrompt);
+                          setNegativePrompt(promptItem.negativePrompt);
+                          setActiveTab('generate');
+                        }}
+                        className="w-full mt-6 py-3 bg-muted hover:bg-primary hover:text-primary-foreground rounded-xl text-sm font-medium transition-colors"
+                      >
+                        Use Prompt
+                      </button>
+                    </div>
+                  ))}
               </div>
             </motion.div>
           ) : (
